@@ -48,7 +48,9 @@ export interface DashboardMessage {
   metrics?: MetricPoint[];
   decisions?: RoutingDecision[];
   predictions?: number[];
+  prediction_confidence?: number;
   active_algorithm?: string;
+  smart_router_active?: boolean;
   simulation?: {
     running: boolean;
     profile: string;

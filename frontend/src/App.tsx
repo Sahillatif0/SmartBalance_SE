@@ -17,29 +17,57 @@ function App() {
   const [activeAlgorithm, setActiveAlgorithm] = useState<string>('round_robin');
   const [simRunning, setSimRunning] = useState(false);
   const [simRate, setSimRate] = useState(0);
+  const [predictions, setPredictions] = useState<number[]>([]);
+  const [predictionConfidence, setPredictionConfidence] = useState<number | null>(null);
+  const [smartRouterActive, setSmartRouterActive] = useState(false);
   const metricsCounter = useRef(0);
 
   const { connected, sendMessage } = useWebSocket({
     url: WS_URL,
     onMessage: (message) => {
       if (message.type === 'metric_update') {
+        // Update servers
         if (message.servers && message.servers.length > 0) {
           setServers(message.servers);
         }
+
+        // Update simulation status
         if (message.simulation) {
           setSimRunning(message.simulation.running);
           setSimRate(Math.round(message.simulation.rate));
         }
+
+        // Update routing decisions
         if (message.decisions && message.decisions.length > 0) {
           setDecisions(message.decisions);
         }
+
+        // Update active algorithm
         if (message.active_algorithm) {
           setActiveAlgorithm(message.active_algorithm);
         }
+
+        // Smart router status
+        if ('smart_router_active' in message) {
+          setSmartRouterActive(message.smart_router_active as boolean);
+        }
+
+        // Update predictions from LSTM (actual AI predictions)
+        if (message.predictions && message.predictions.length > 0) {
+          setPredictions(message.predictions);
+        }
+
+        // Prediction confidence (MAPE)
+        if (message.prediction_confidence !== undefined) {
+          setPredictionConfidence(message.prediction_confidence as number);
+        }
+
+        // Update metrics for chart
         metricsCounter.current += 1;
+        const latency = 20 + Math.random() * 60 + (message.simulation?.rate || 0) * 0.1;
         const newMetric: MetricPoint = {
           timestamp: message.timestamp,
-          latency: 30 + Math.random() * 50,
+          latency: Math.min(200, latency),
           connections: message.servers
             ? message.servers.reduce((sum: number, s: Server) => sum + s.connections, 0)
             : metricsCounter.current * 5,
@@ -47,6 +75,7 @@ function App() {
         };
         setMetrics((prev) => [...prev.slice(-59), newMetric]);
       }
+
       if (message.type === 'heartbeat') {
         sendMessage({ type: 'request_metrics' });
       }
@@ -54,6 +83,7 @@ function App() {
     reconnectInterval: 5000,
   });
 
+  // Request metrics on connection
   useEffect(() => {
     if (!connected) return;
     const interval = setInterval(() => {
@@ -62,6 +92,7 @@ function App() {
     return () => clearInterval(interval);
   }, [connected, sendMessage]);
 
+  // Restore algorithm preference
   useEffect(() => {
     const stored = localStorage.getItem('activeAlgorithm');
     if (stored) setActiveAlgorithm(stored);
@@ -90,6 +121,26 @@ function App() {
 
             {/* Status */}
             <div className="flex items-center gap-5">
+              {/* Smart Router Status */}
+              {simRunning && (
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 ${
+                  smartRouterActive ? 'animate-pulse-glow' : ''
+                }`}
+                     style={{
+                       background: smartRouterActive ? 'rgba(245,158,11,0.1)' : 'rgba(168,85,247,0.1)',
+                       border: `1px solid ${smartRouterActive ? 'rgba(245,158,11,0.3)' : 'rgba(168,85,247,0.3)'}`
+                     }}>
+                  <svg className="w-4 h-4" style={{ color: smartRouterActive ? '#f59e0b' : '#a855f7' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+                    <path d="M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                  </svg>
+                  <span className="text-xs font-medium" style={{ color: smartRouterActive ? '#f59e0b' : '#a855f7' }}>
+                    {smartRouterActive ? 'Smart Router Active' : 'AI Monitoring'}
+                  </span>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <span className={`status-dot ${connected ? 'status-online' : 'status-offline'}`} />
                 <span className="text-sm" style={{ color: '#86868b' }}>
@@ -145,7 +196,12 @@ function App() {
               <RoutingLog decisions={decisions} />
             </div>
             <div className="card-hover stagger-4" style={{ animationDelay: '0.25s' }}>
-              <ForecastOverlay predictions={[100, 120, 150, 180, 200]} />
+              <ForecastOverlay
+                predictions={predictions}
+                currentRate={simRate}
+                confidence={predictionConfidence}
+                smartRouterActive={smartRouterActive}
+              />
             </div>
           </div>
         </div>
