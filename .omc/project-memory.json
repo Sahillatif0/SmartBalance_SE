@@ -1,0 +1,162 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1777827716347,
+  "projectRoot": "D:\\Fresh Start\\AI ML Projects\\SmartBalance",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "backend": {
+      "path": "backend",
+      "purpose": null,
+      "fileCount": 3,
+      "lastAccessed": 1777827716268,
+      "keyFiles": [
+        "Dockerfile",
+        "requirements.txt",
+        "smartbalance.db"
+      ]
+    },
+    "frontend": {
+      "path": "frontend",
+      "purpose": null,
+      "fileCount": 9,
+      "lastAccessed": 1777827716269,
+      "keyFiles": [
+        "Dockerfile",
+        "index.html",
+        "package-lock.json",
+        "package.json",
+        "postcss.config.js"
+      ]
+    },
+    "backend\\app": {
+      "path": "backend\\app",
+      "purpose": "Application code",
+      "fileCount": 6,
+      "lastAccessed": 1777827716272,
+      "keyFiles": [
+        "config.py",
+        "database.py",
+        "main.py"
+      ]
+    },
+    "backend\\tests": {
+      "path": "backend\\tests",
+      "purpose": "Test files",
+      "fileCount": 3,
+      "lastAccessed": 1777827716272,
+      "keyFiles": [
+        "conftest.py",
+        "test_algorithms.py",
+        "__init__.py"
+      ]
+    },
+    "frontend\\src": {
+      "path": "frontend\\src",
+      "purpose": "Source code",
+      "fileCount": 3,
+      "lastAccessed": 1777827716279,
+      "keyFiles": [
+        "App.tsx",
+        "index.css",
+        "main.tsx"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "README.md",
+      "accessCount": 1,
+      "lastAccessed": 1777827818186,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\main.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827949837,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\simulation\\traffic_simulator.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827950312,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\ml\\lstm_model.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827950444,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\core\\load_balancer.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827950783,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\core\\round_robin.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827967683,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\core\\smart_router.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827968132,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\core\\least_connections.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827968565,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\simulation\\health_checker.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827969081,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\services\\websocket_manager.py",
+      "accessCount": 1,
+      "lastAccessed": 1777827982568,
+      "type": "file"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "accessCount": 1,
+      "lastAccessed": 1777828041019,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd /d/Fresh\\\\ Start/AI\\\\ ML\\\\ Projects/SmartBalance/backend && ls -la app/simulation/ && echo \\\"---\\\" && ls -la frontend/src/\",\"description\":\"List simulation and frontend src directories\"}",
+  "error": "Exit code 2\ntotal 28\ndrwxr-xr-x 1 HP 197121    0 May  3 22:00 .\ndrwxr-xr-x 1 HP 197121    0 May  3 22:00 ..\n-rw-r--r-- 1 HP 197121    0 May  3 22:00 __init__.py\n-rw-r--r-- 1 HP 197121 1400 May  3 22:00 event_bus.py\n-rw-r--r-- 1 HP 197121 3704 May  3 22:00 health_checker.py\n-rw-r--r-- 1 HP 197121 2884 May  3 22:00 server_pool.py\n-rw-r--r-- 1 HP 197121 3015 May  3 22:00 traffic_generator.py\n-rw-r--r-- 1 HP 197121 2155 May  3 22:00 traffic_simulator.py\n---\nls: cannot access 'frontend/src/': No such...",
+  "timestamp": "2026-05-03T17:03:55.259Z",
+  "retry_count": 1
+}
