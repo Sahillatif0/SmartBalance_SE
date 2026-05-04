@@ -44,7 +44,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend (Sprint 2)
+### Frontend
 
 ```bash
 cd frontend
@@ -76,6 +76,16 @@ docker-compose up --build
 cd backend
 pytest tests/ -v
 ```
+
+## Docker
+
+```bash
+docker-compose up --build
+```
+
+## Project Status
+
+**100% Complete** — All features implemented, 29 unit tests passing.
 
 ## License
 

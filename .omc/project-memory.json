@@ -10,7 +10,7 @@
   },
   "build": {
     "buildCommand": null,
-    "testCommand": null,
+    "testCommand": "cd \"D:/Fresh Start/AI ML Projects/SmartBalance/backend\" && pytest tests/ -v --tb=no 2>&1 | tail -20",
     "lintCommand": null,
     "devCommand": null,
     "scripts": {}
@@ -92,9 +92,21 @@
   },
   "hotPaths": [
     {
+      "path": "docs\\SRS.md",
+      "accessCount": 8,
+      "lastAccessed": 1777914916429,
+      "type": "file"
+    },
+    {
       "path": "README.md",
-      "accessCount": 2,
-      "lastAccessed": 1777910292198,
+      "accessCount": 6,
+      "lastAccessed": 1777914985107,
+      "type": "file"
+    },
+    {
+      "path": "docs\\generate_srs_docx.py",
+      "accessCount": 3,
+      "lastAccessed": 1777914928464,
       "type": "file"
     },
     {
@@ -128,9 +140,9 @@
       "type": "file"
     },
     {
-      "path": "docs\\generate_srs_docx.py",
+      "path": "docker-compose.yml",
       "accessCount": 2,
-      "lastAccessed": 1777913164704,
+      "lastAccessed": 1777914229930,
       "type": "file"
     },
     {
@@ -164,12 +176,6 @@
       "type": "file"
     },
     {
-      "path": "docker-compose.yml",
-      "accessCount": 1,
-      "lastAccessed": 1777828152369,
-      "type": "file"
-    },
-    {
       "path": "backend\\app\\models.py",
       "accessCount": 1,
       "lastAccessed": 1777910696392,
@@ -188,9 +194,51 @@
       "type": "file"
     },
     {
-      "path": "docs\\SRS.md",
+      "path": "frontend\\src\\App.tsx",
       "accessCount": 1,
-      "lastAccessed": 1777912797367,
+      "lastAccessed": 1777914081819,
+      "type": "file"
+    },
+    {
+      "path": "frontend\\src\\hooks\\useWebSocket.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777914082793,
+      "type": "file"
+    },
+    {
+      "path": "frontend\\src\\components\\ServerList.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777914082965,
+      "type": "file"
+    },
+    {
+      "path": "frontend\\src\\components\\ForecastOverlay.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777914184056,
+      "type": "file"
+    },
+    {
+      "path": "frontend\\src\\components\\MetricsChart.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777914184241,
+      "type": "file"
+    },
+    {
+      "path": "backend\\tests\\test_algorithms.py",
+      "accessCount": 1,
+      "lastAccessed": 1777914184412,
+      "type": "file"
+    },
+    {
+      "path": "backend\\Dockerfile",
+      "accessCount": 1,
+      "lastAccessed": 1777914229638,
+      "type": "file"
+    },
+    {
+      "path": "frontend\\Dockerfile",
+      "accessCount": 1,
+      "lastAccessed": 1777914229734,
       "type": "file"
     }
   ],
