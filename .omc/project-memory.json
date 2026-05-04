@@ -93,26 +93,44 @@
   "hotPaths": [
     {
       "path": "README.md",
-      "accessCount": 1,
-      "lastAccessed": 1777827818186,
+      "accessCount": 2,
+      "lastAccessed": 1777910292198,
       "type": "file"
     },
     {
       "path": "backend\\app\\main.py",
-      "accessCount": 1,
-      "lastAccessed": 1777827949837,
+      "accessCount": 2,
+      "lastAccessed": 1777910696604,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\core\\smart_router.py",
+      "accessCount": 2,
+      "lastAccessed": 1777910710650,
       "type": "file"
     },
     {
       "path": "backend\\app\\simulation\\traffic_simulator.py",
-      "accessCount": 1,
-      "lastAccessed": 1777827950312,
+      "accessCount": 2,
+      "lastAccessed": 1777910710814,
       "type": "file"
     },
     {
       "path": "backend\\app\\ml\\lstm_model.py",
-      "accessCount": 1,
-      "lastAccessed": 1777827950444,
+      "accessCount": 2,
+      "lastAccessed": 1777910710934,
+      "type": "file"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "accessCount": 2,
+      "lastAccessed": 1777912197330,
+      "type": "file"
+    },
+    {
+      "path": "docs\\generate_srs_docx.py",
+      "accessCount": 2,
+      "lastAccessed": 1777913164704,
       "type": "file"
     },
     {
@@ -125,12 +143,6 @@
       "path": "backend\\app\\core\\round_robin.py",
       "accessCount": 1,
       "lastAccessed": 1777827967683,
-      "type": "file"
-    },
-    {
-      "path": "backend\\app\\core\\smart_router.py",
-      "accessCount": 1,
-      "lastAccessed": 1777827968132,
       "type": "file"
     },
     {
@@ -152,9 +164,33 @@
       "type": "file"
     },
     {
-      "path": "ARCHITECTURE.md",
+      "path": "docker-compose.yml",
       "accessCount": 1,
-      "lastAccessed": 1777828041019,
+      "lastAccessed": 1777828152369,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\models.py",
+      "accessCount": 1,
+      "lastAccessed": 1777910696392,
+      "type": "file"
+    },
+    {
+      "path": "backend\\app\\core\\algorithm_registry.py",
+      "accessCount": 1,
+      "lastAccessed": 1777910696741,
+      "type": "file"
+    },
+    {
+      "path": "srs_template-ieee.pdf",
+      "accessCount": 1,
+      "lastAccessed": 1777912197187,
+      "type": "file"
+    },
+    {
+      "path": "docs\\SRS.md",
+      "accessCount": 1,
+      "lastAccessed": 1777912797367,
       "type": "file"
     }
   ],

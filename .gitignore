@@ -1,13 +1,66 @@
-CLAUDE.md
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
-#Frontend
+# Virtual environments
+backend/venv/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node (frontend)
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
 
-
-#Backend
-backend/.pytest_cache/
-backend/__pycache__/
-
-__pycache__/
+# Build outputs
 *.pyc
+*.pyo
+
+# OMC (oh-my-claude-code)
+.omc/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Docs generated
+docs/generate_srs_docx.py
