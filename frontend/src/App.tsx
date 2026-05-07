@@ -21,25 +21,36 @@ function App() {
   const [predictionConfidence, setPredictionConfidence] = useState<number | null>(null);
   const [smartRouterActive, setSmartRouterActive] = useState(false);
   const metricsCounter = useRef(0);
+  const prevSimRunning = useRef<boolean | null>(null);
 
   const { connected, sendMessage } = useWebSocket({
     url: WS_URL,
     onMessage: (message) => {
       if (message.type === 'metric_update') {
+        const isRunning = message.simulation?.running ?? false;
+
+        // Detect transition from running to stopped - only reset ONCE
+        const justStopped = prevSimRunning.current === true && !isRunning;
+        prevSimRunning.current = isRunning;
+
         // Update servers
         if (message.servers && message.servers.length > 0) {
-          setServers(message.servers);
+          setServers(message.servers.map(s => ({ ...s, connections: isRunning ? s.connections : 0 })));
+        } else if (!isRunning) {
+          setServers(servers.map(s => ({ ...s, connections: 0 })));
         }
 
         // Update simulation status
         if (message.simulation) {
-          setSimRunning(message.simulation.running);
-          setSimRate(Math.round(message.simulation.rate));
+          setSimRunning(isRunning);
+          setSimRate(isRunning ? Math.round(message.simulation.rate) : 0);
         }
 
         // Update routing decisions
-        if (message.decisions && message.decisions.length > 0) {
+        if (isRunning && message.decisions?.length) {
           setDecisions(message.decisions);
+        } else if (!isRunning) {
+          setDecisions([]);
         }
 
         // Update active algorithm
@@ -52,28 +63,40 @@ function App() {
           setSmartRouterActive(message.smart_router_active as boolean);
         }
 
-        // Update predictions from LSTM (actual AI predictions)
-        if (message.predictions && message.predictions.length > 0) {
+        // Update predictions
+        if (isRunning && message.predictions?.length) {
           setPredictions(message.predictions);
+        } else if (!isRunning) {
+          setPredictions([]);
         }
 
         // Prediction confidence (MAPE)
         if (message.prediction_confidence !== undefined) {
           setPredictionConfidence(message.prediction_confidence as number);
+        } else if (!isRunning) {
+          setPredictionConfidence(null);
         }
 
-        // Update metrics for chart
-        metricsCounter.current += 1;
-        const latency = 20 + Math.random() * 60 + (message.simulation?.rate || 0) * 0.1;
-        const newMetric: MetricPoint = {
-          timestamp: message.timestamp,
-          latency: Math.min(200, latency),
-          connections: message.servers
+        // Only reset metrics ONCE when simulation stops
+        if (justStopped) {
+          setMetrics([]);
+          metricsCounter.current = 0;
+        } else if (isRunning) {
+          // Update metrics while running
+          metricsCounter.current += 1;
+          const latency = 20 + Math.random() * 60 + (message.simulation?.rate || 0) * 0.1;
+          const connections = message.servers
             ? message.servers.reduce((sum: number, s: Server) => sum + s.connections, 0)
-            : metricsCounter.current * 5,
-          errorRate: Math.random() * 0.005,
-        };
-        setMetrics((prev) => [...prev.slice(-59), newMetric]);
+            : metricsCounter.current * 5;
+
+          setMetrics((prev) => [...prev.slice(-59), {
+            timestamp: message.timestamp,
+            latency: Math.min(200, latency),
+            connections,
+            errorRate: Math.random() * 0.005,
+          }]);
+        }
+        // When stopped (but not justStopped), don't update metrics at all
       }
 
       if (message.type === 'heartbeat') {
@@ -201,6 +224,7 @@ function App() {
                 currentRate={simRate}
                 confidence={predictionConfidence}
                 smartRouterActive={smartRouterActive}
+                running={simRunning}
               />
             </div>
           </div>

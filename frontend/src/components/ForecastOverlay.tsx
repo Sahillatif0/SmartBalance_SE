@@ -6,35 +6,39 @@ interface ForecastOverlayProps {
   currentRate?: number;
   confidence?: number | null;
   smartRouterActive?: boolean;
+  running?: boolean;
 }
 
-export function ForecastOverlay({ predictions, currentRate = 100, confidence, smartRouterActive }: ForecastOverlayProps) {
+export function ForecastOverlay({ predictions, currentRate = 100, confidence, smartRouterActive, running = true }: ForecastOverlayProps) {
   const [displayPredictions, setDisplayPredictions] = useState<number[]>([]);
 
   // Update predictions with smooth transitions when new data arrives
   useEffect(() => {
     if (predictions && predictions.length > 0) {
       setDisplayPredictions(predictions);
+    } else if (!running) {
+      // Clear predictions when stopped
+      setDisplayPredictions([]);
     }
-  }, [predictions]);
+  }, [predictions, running]);
 
   // Fallback if no predictions from LSTM yet
   useEffect(() => {
-    if (displayPredictions.length === 0 && currentRate > 0) {
+    if (displayPredictions.length === 0 && currentRate > 0 && running) {
       // Generate realistic initial predictions
       const initial = Array.from({ length: 5 }, (_, i) =>
         currentRate * (0.9 + i * 0.15 + Math.random() * 0.1)
       );
       setDisplayPredictions(initial);
     }
-  }, [currentRate]);
+  }, [currentRate, running]);
 
-  const data = displayPredictions.length > 0 ? displayPredictions : [100, 120, 150, 180, 200];
-  const maxPrediction = Math.max(...data);
-  const avgPrediction = data.reduce((a, b) => a + b, 0) / data.length;
-  const isSpike = maxPrediction > avgPrediction * 1.4;
-  const isHighLoad = avgPrediction > currentRate * 1.2;
-  const isDeclining = data[data.length - 1] < data[0];
+  const data = displayPredictions.length > 0 ? displayPredictions : (running ? [100, 120, 150, 180, 200] : []);
+  const maxPrediction = data.length > 0 ? Math.max(...data) : 0;
+  const avgPrediction = data.length > 0 ? data.reduce((a, b) => a + b, 0) / data.length : 0;
+  const isSpike = data.length > 0 && maxPrediction > avgPrediction * 1.4;
+  const isHighLoad = data.length > 0 && avgPrediction > currentRate * 1.2;
+  const isDeclining = data.length > 0 && data[data.length - 1] < data[0];
 
   // Calculate prediction confidence based on prediction variance
   const variance = data.reduce((sum, val) => sum + Math.pow(val - avgPrediction, 2), 0) / data.length;
@@ -101,7 +105,7 @@ export function ForecastOverlay({ predictions, currentRate = 100, confidence, sm
           <div>
             <div className="text-xs" style={{ color: '#86868b' }}>Current Rate</div>
             <div className="flex items-baseline gap-1">
-              <span className="font-mono text-lg font-semibold">{currentRate.toFixed(0)}</span>
+              <span className="font-mono text-lg font-semibold">{running ? currentRate.toFixed(0) : '0'}</span>
               <span className="text-xs" style={{ color: '#48484a' }}>req/s</span>
             </div>
           </div>
@@ -227,7 +231,7 @@ export function ForecastOverlay({ predictions, currentRate = 100, confidence, sm
               </span>
             </div>
             <p className="text-xs leading-relaxed" style={{ color: '#86868b' }}>
-              Peak load prediction: {Math.round(maxPrediction)} req/s (+{((maxPrediction / currentRate - 1) * 100).toFixed(0)}% from current).
+              Peak load prediction: {Math.round(maxPrediction)} req/s (+{currentRate > 0 ? ((maxPrediction / currentRate - 1) * 100).toFixed(0) : 0}% from current).
               Switching to Least Connections for optimal distribution.
             </p>
           </div>

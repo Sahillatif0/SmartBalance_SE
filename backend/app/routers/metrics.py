@@ -7,23 +7,30 @@ from app.database import get_db
 from app.models import Metric as MetricModel
 from app.schemas import MetricResponse
 import asyncio
+import threading
 
 router = APIRouter()
 
 # Active WebSocket connections
 _active_connections: dict[str, WebSocket] = {}
+# Lock for thread-safe access to connections
+_connections_lock = threading.Lock()
 
 
 async def broadcast_to_all(data: dict):
     """Broadcast data to all connected WebSocket clients."""
     disconnected = []
-    for client_id, ws in _active_connections.items():
+    with _connections_lock:
+        connections_snapshot = list(_active_connections.items())
+    for client_id, ws in connections_snapshot:
         try:
             await ws.send_json(data)
         except Exception:
             disconnected.append(client_id)
-    for client_id in disconnected:
-        _active_connections.pop(client_id, None)
+    if disconnected:
+        with _connections_lock:
+            for client_id in disconnected:
+                _active_connections.pop(client_id, None)
 
 
 @router.get("", response_model=List[MetricResponse])
@@ -58,7 +65,8 @@ async def websocket_metrics(websocket: WebSocket):
     """WebSocket endpoint for real-time metrics streaming."""
     client_id = str(id(websocket))
     await websocket.accept()
-    _active_connections[client_id] = websocket
+    with _connections_lock:
+        _active_connections[client_id] = websocket
 
     try:
         while True:
@@ -66,7 +74,7 @@ async def websocket_metrics(websocket: WebSocket):
                 # Wait for client message
                 raw = await asyncio.wait_for(
                     websocket.receive_text(),
-                    timeout=10.0
+                    timeout=30.0
                 )
 
                 # Handle ping
@@ -84,7 +92,7 @@ async def websocket_metrics(websocket: WebSocket):
                 })
 
             except asyncio.TimeoutError:
-                # Send heartbeat every 10 seconds if idle
+                # Send heartbeat every 30 seconds if idle
                 try:
                     await websocket.send_json({
                         "type": "heartbeat",
@@ -98,7 +106,8 @@ async def websocket_metrics(websocket: WebSocket):
     except Exception:
         pass
     finally:
-        _active_connections.pop(client_id, None)
+        with _connections_lock:
+            _active_connections.pop(client_id, None)
 
 
 def get_broadcast_func():

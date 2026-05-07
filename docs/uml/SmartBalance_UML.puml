@@ -1,0 +1,498 @@
+@startuml SmartBalance_System_Architecture
+!theme plain
+
+title SmartBalance - AI-Driven Load Balancer System Architecture
+
+package "Frontend (React/Vite)" {
+  [Dashboard.tsx] as Dashboard
+  [ServerList.tsx] as ServerList
+  [MetricsChart.tsx] as MetricsChart
+  [TrafficSimulator.tsx] as TrafficSimulator
+  [useWebSocket.ts] as WebSocketHook
+  [useMetrics.ts] as MetricsHook
+  [types/index.ts] as FrontendTypes
+}
+
+package "Backend (FastAPI/Python)" {
+  package "Core - Load Balancing" {
+    [LoadBalancer.abstract] as LB_Abstract
+    [RoundRobinLB] as RR_LB
+    [LeastConnectionsLB] as LC_LB
+    [WeightedRoundRobinLB] as WRR_LB
+    [SmartRouter] as Smart_Router
+    [Server.dataclass] as Server
+  }
+
+  package "ML - LSTM Prediction" {
+    [LSTMModel] as LSTM
+    [TrafficPredictor] as Predictor
+    [metrics_calculator] as MetricsCalc
+  }
+
+  package "Simulation Engine" {
+    [TrafficGenerator] as TrafficGen
+    [HealthChecker] as HealthCheck
+    [FaultInjector] as FaultInject
+  }
+
+  package "Services" {
+    [RoutingService] as RoutingSvc
+    [WebSocketManager] as WSManager
+  }
+
+  package "API Routers" {
+    [servers_router] as ServersAPI
+    [algorithms_router] as AlgosAPI
+    [simulation_router] as SimAPI
+    [metrics_router] as MetricsAPI
+  }
+
+  package "Data Layer" {
+    [Server.model] as ServerModel
+    [Metric.model] as MetricModel
+    [RoutingDecision.model] as RoutingModel
+    [schemas.py] as Schemas
+  }
+}
+
+package "Database" {
+  database "SQLite" as DB
+}
+
+' Relationships
+Dashboard --> WebSocketHook
+Dashboard --> MetricsHook
+ServerList --> WebSocketHook
+MetricsChart --> MetricsHook
+TrafficSimulator --> WebSocketHook
+
+WebSocketHook --> WSManager
+MetricsHook --> WSManager
+
+LB_Abstract <|-- RR_LB
+LB_Abstract <|-- LC_LB
+LB_Abstract <|-- WRR_LB
+LB_Abstract <|-- Smart_Router
+
+Smart_Router --> Predictor
+Smart_Router --> LC_LB
+Smart_Router --> RR_LB
+
+RoutingSvc --> LB_Abstract
+RoutingSvc --> Server
+RoutingSvc --> Predictor
+RoutingSvc --> WSManager
+
+TrafficGen --> RoutingSvc
+HealthCheck --> Server
+FaultInject --> Server
+
+ServersAPI --> RoutingSvc
+ServersAPI --> Schemas
+AlgosAPI --> RoutingSvc
+SimAPI --> TrafficGen
+MetricsAPI --> RoutingSvc
+
+ServerModel --> DB
+MetricModel --> DB
+RoutingModel --> DB
+
+@enduml
+
+@startuml SmartBalance_Class_Diagram
+!theme plain
+
+title SmartBalance - Core Class Diagram
+
+class Server {
+  +id: str
+  +host: str
+  +port: int
+  +weight: int = 1
+  +connections: int = 0
+  +healthy: bool = True
+  +failure_count: int = 0
+  +last_health_check: datetime
+  --
+  +increment_connections()
+  +decrement_connections()
+  +mark_unhealthy()
+  +mark_healthy()
+}
+
+abstract class LoadBalancer {
+  +name: str {abstract}
+  +description: str {abstract}
+  +complexity: str {abstract}
+  --
+  +select_server(servers: List[Server]): Server {abstract}
+  +filter_healthy(servers): List[Server]
+  +get_least_busy_server(servers): Server
+}
+
+class RoundRobinLB {
+  -current_index: int
+  --
+  +select_server(servers): Server
+  +name: str = "Round Robin"
+  +description: str = "O(1) circular distribution"
+  +complexity: str = "O(1)"
+}
+
+class LeastConnectionsLB {
+  -connection_heap: List[Tuple[int, str]]
+  --
+  +select_server(servers): Server
+  +name: str = "Least Connections"
+  +description: str = "Min-heap based selection"
+  +complexity: str = "O(log n)"
+}
+
+class WeightedRoundRobinLB {
+  -current_weights: Dict[str, int]
+  -cycle_complete: bool
+  --
+  +select_server(servers): Server
+  +name: str = "Weighted Round Robin"
+  +description: str = "Weight-based cycling"
+  +complexity: str = "O(n)"
+}
+
+class SmartRouter {
+  -inner_algorithm: LoadBalancer
+  -prediction_threshold: float = 1.5
+  -mape_target: float = 15.0
+  -traffic_predictor: TrafficPredictor
+  --
+  +select_server(servers): Server
+  +update_predictions(traffic_rates)
+  +should_switch_algorithm(prediction): bool
+  +name: str = "Smart Router"
+  +description: str = "AI-driven algorithm switching"
+  +complexity: str = "O(n)"
+}
+
+class LSTMModel {
+  -lstm: nn.LSTM
+  -fc: Sequential
+  -hidden_size: int = 64
+  -num_layers: int = 2
+  -output_steps: int = 15
+  --
+  +forward(x): Tensor
+}
+
+class TrafficPredictor {
+  -window_size: int = 60
+  -forecast_steps: int = 15
+  -model: LSTMModel
+  -trajectory: List[float]
+  -is_trained: bool
+  --
+  +add_traffic_sample(rate: float)
+  +predict(): List[float]
+  +get_mape(actual, predicted): float
+  +train_model(X, y, epochs)
+}
+
+class RoutingService {
+  -servers: List[Server]
+  -load_balancer: LoadBalancer
+  -predictor: TrafficPredictor
+  -ws_manager: WebSocketManager
+  --
+  +register_server(server)
+  +remove_server(server_id)
+  +route_request(): RoutingResult
+  +switch_algorithm(name)
+  +get_metrics()
+}
+
+LoadBalancer <|-- RoundRobinLB
+LoadBalancer <|-- LeastConnectionsLB
+LoadBalancer <|-- WeightedRoundRobinLB
+LoadBalancer <|-- SmartRouter
+
+SmartRouter o-- LoadBalancer
+SmartRouter o-- TrafficPredictor
+TrafficPredictor o-- LSTMModel
+RoutingService o-- LoadBalancer
+RoutingService o-- Server
+RoutingService o-- TrafficPredictor
+
+@enduml
+
+@startuml SmartBalance_Sequence_Diagram
+!theme plain
+
+title SmartBalance - Request Routing Flow
+
+actor Client
+participant "Frontend\nDashboard" as FE
+participant "WebSocket" as WS
+participant "RoutingService" as Routing
+participant "LoadBalancer" as LB
+participant "SmartRouter" as SR
+participant "LSTM\nPredictor" as Predictor
+participant "Backend\nServer" as Backend
+
+== Normal Request Flow ==
+
+Client -> FE: HTTP Request
+FE -> WS: Route Request
+WS -> Routing: route_request()
+Routing -> LB: select_server(servers)
+LB -> Backend: Select Server
+Backend --> LB: Selected Server
+LB --> Routing: RoutingResult
+Routing -> WS: Broadcast Update
+WS --> FE: Server Update
+FE --> Client: Response
+
+== Smart Router Auto-Switch ==
+
+Routing -> Predictor: predict_next()
+Predictor -> Predictor: Generate 15-step forecast
+Predictor --> Routing: predictions[]
+
+alt Predicted Load > 150% Capacity
+    Routing -> Routing: switch_algorithm("least_connections")
+    Routing -> LB: Update Algorithm
+    Routing -> WS: Broadcast Algorithm Change
+end
+
+== Traffic Simulation ==
+
+actor Operator
+Operator -> FE: Configure Simulation
+FE -> WS: /simulation/config
+WS -> Routing: Update Config
+Routing -> TrafficGenerator: Apply Profile
+TrafficGenerator -> Routing: Generate Traffic
+note right
+  Profiles:
+  - steady: Constant rate
+  - burst: High spikes
+  - ramp: Gradual increase
+  - wave: Sinusoidal pattern
+end note
+
+== Health Check ==
+
+loop Every 5 seconds
+    HealthChecker -> Backend: Health Check
+    alt 3 Consecutive Failures
+        HealthChecker -> Server: mark_unhealthy()
+        HealthChecker -> WS: Broadcast Health Update
+    else Server Responds
+        HealthChecker -> Server: mark_healthy()
+    end
+end
+
+@enduml
+
+@startuml SmartBalance_Component_Diagram
+!theme plain
+
+title SmartBalance - Component Architecture
+
+package "Presentation Layer" {
+  [React\nDashboard] as UI
+  [WebSocket\nConnection] as WSConn
+}
+
+package "Application Layer" {
+  [Routing\nOrchestration] as App1
+  [Traffic\nSimulation] as App2
+  [Health\nMonitoring] as App3
+  [ML\nPrediction] as App4
+}
+
+package "Domain Layer" {
+  [Load Balancing\nAlgorithms] as Domain1
+  [LSTM\nModel] as Domain2
+  [Traffic\nPatterns] as Domain3
+}
+
+package "Infrastructure Layer" {
+  [WebSocket\nManager] as Infra1
+  [Database\nRepository] as Infra2
+  [API\nGateway] as Infra3
+}
+
+package "External Systems" {
+  [Backend\nServers] as Backend1
+  [Backend\nServers] as Backend2
+  [Backend\nServers] as Backend3
+}
+
+' Connections
+UI --> WSConn
+WSConn --> App1
+WSConn --> App2
+WSConn --> App3
+WSConn --> App4
+
+App1 --> Domain1
+App4 --> Domain2
+App2 --> Domain3
+
+App1 --> Infra1
+App2 --> Infra1
+App3 --> Infra1
+
+App1 --> Infra2
+App3 --> Infra2
+
+Domain1 --> Backend1
+Domain1 --> Backend2
+Domain1 --> Backend3
+
+note "FastAPI REST + WebSocket" as N1
+N1 .. Infra3
+
+@enduml
+
+@startuml SmartBalance_State_Diagram
+!theme plain
+
+title SmartBalance - Server Health State Machine
+
+state ServerLifecycle {
+  [*] --> Healthy
+  Healthy --> Degraded : Single Health Check Failure
+  Degraded --> Healthy : Health Check Success
+  Degraded --> Unhealthy : 3 Consecutive Failures
+  Unhealthy --> Degraded : Manual Recovery / Graceful Restart
+  Unhealthy --> Healthy : Automatic Recovery After Timeout
+  Healthy --> [*] : Removed from Pool
+  Unhealthy --> [*] : Removed from Pool
+}
+
+state AlgorithmSelection {
+  [*] --> RoundRobin
+
+  state RoundRobin {
+    state "Normal Traffic" as RR1
+    state "Under Load" as RR2
+  }
+
+  RoundRobin --> LeastConnections : Predicted Load > 150%
+  LeastConnections --> RoundRobin : Load Returns to Normal
+
+  state LeastConnections {
+    state "Burst Traffic" as LC1
+    state "Balancing" as LC2
+  }
+
+  LC1 --> LC2 : Traffic Stabilizes
+  LC2 --> LC1 : New Burst Detected
+}
+
+[*] --> Active
+Active --> AlgorithmSelection
+AlgorithmSelection -right-> [*]
+
+note right of RoundRobin
+  O(1) Circular Selection
+  Default Algorithm
+end note
+
+note right of LeastConnections
+  O(log n) Min-Heap
+  Optimal for Burst Traffic
+end note
+
+@enduml
+
+@startuml SmartBalance_API_Endpoints
+!theme plain
+
+title SmartBalance - API Endpoints
+
+package "Server Management" {
+  GET /api/v1/servers <<List all servers>>
+  POST /api/v1/servers <<Register new server>>
+  GET /api/v1/servers/{id} <<Get server details>>
+  PUT /api/v1/servers/{id} <<Update server>>
+  DELETE /api/v1/servers/{id} <<Remove server>>
+}
+
+package "Algorithm Control" {
+  GET /api/v1/algorithms <<List algorithms>>
+  POST /api/v1/algorithms/{name}/select <<Switch algorithm>>
+  GET /api/v1/algorithms/stats <<Get algorithm metrics>>
+}
+
+package "Traffic Simulation" {
+  POST /api/v1/simulation/start <<Start simulation>>
+  POST /api/v1/simulation/stop <<Stop simulation>>
+  GET /api/v1/simulation/config <<Get config>>
+  PUT /api/v1/simulation/config <<Update config>>
+}
+
+package "Metrics & Predictions" {
+  GET /api/v1/metrics <<Historical metrics>>
+  WS /api/v1/metrics/live <<WebSocket stream>>
+  GET /api/v1/predictions <<LSTM forecast>>
+}
+
+package "System" {
+  GET /health <<Health check>>
+}
+
+@enduml
+
+@startuml SmartBalance_Data_Model
+!theme plain
+
+title SmartBalance - Data Models
+
+class Server {
+  id: string (PK)
+  host: string
+  port: integer
+  weight: integer
+  connections: integer
+  healthy: boolean
+  failure_count: integer
+  created_at: datetime
+  updated_at: datetime
+}
+
+class Metric {
+  id: integer (PK)
+  server_id: string (FK)
+  timestamp: datetime
+  latency: float
+  error_rate: float
+  throughput: float
+}
+
+class RoutingDecision {
+  id: integer (PK)
+  algorithm: string
+  selected_server_id: string
+  request_count: integer
+  timestamp: datetime
+  extra_data: JSON
+}
+
+class SimulationConfig {
+  profile: enum(steady|burst|ramp|wave)
+  rate: float
+  duration: float
+  start_time: datetime
+}
+
+class Prediction {
+  predictions: float[]
+  timestamps: datetime[]
+  confidence: float
+  model_version: string
+}
+
+Server "1" --> "many" Metric
+Server "1" --> "many" RoutingDecision
+
+@enduml

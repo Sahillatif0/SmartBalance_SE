@@ -57,7 +57,8 @@ class TrafficGenerator:
 
         self._elapsed_time += delta_time
 
-        if self.duration and self._elapsed_time > self.duration:
+        # Only check duration if explicitly set (not None or 0)
+        if self.duration and self.duration > 0 and self._elapsed_time > self.duration:
             return 0
 
         rate = self.profile.generate(self._elapsed_time)

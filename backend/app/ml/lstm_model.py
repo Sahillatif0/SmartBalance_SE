@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from typing import List, Optional
+from collections import deque
 import random
 
 
@@ -73,8 +74,8 @@ class TrafficPredictor:
             output_steps=forecast_steps
         ).to(self.device)
 
-        # Trajectory buffer for sliding window
-        self.trajectory: List[float] = []
+        # Trajectory buffer for sliding window - use deque for efficient popleft
+        self.trajectory: deque = deque(maxlen=window_size)
         self.is_trained = False
 
         # Train with synthetic patterns
@@ -170,10 +171,7 @@ class TrafficPredictor:
     def add_traffic_sample(self, request_rate: float):
         """Add a new traffic sample to the trajectory buffer."""
         self.trajectory.append(request_rate)
-
-        # Keep only last window_size samples
-        if len(self.trajectory) > self.window_size:
-            self.trajectory.pop(0)
+        # deque with maxlen auto-removes oldest when full
 
     def predict(self) -> Optional[List[float]]:
         """
@@ -192,13 +190,17 @@ class TrafficPredictor:
 
         self.model.eval()
         with torch.no_grad():
-            # Normalize trajectory
-            min_val = min(self.trajectory) if self.trajectory else 0
-            max_val = max(self.trajectory) if self.trajectory else 1
+            # Normalize trajectory - convert deque to list for slicing
+            trajectory_list = list(self.trajectory)
+            min_val = min(trajectory_list) if trajectory_list else 0
+            max_val = max(trajectory_list) if trajectory_list else 1
             if max_val == min_val:
                 max_val = min_val + 1
 
-            normalized = [[(v - min_val) / (max_val - min_val)] for v in self.trajectory[-self.window_size:]]
+            # Get last window_size samples
+            samples = trajectory_list[-self.window_size:] if len(trajectory_list) >= self.window_size else trajectory_list
+
+            normalized = [[(v - min_val) / (max_val - min_val)] for v in samples]
 
             # Pad if needed
             while len(normalized) < self.window_size:

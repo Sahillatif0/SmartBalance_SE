@@ -5,6 +5,7 @@ from app.schemas import SimulationConfig, SimulationResponse
 from app.simulation.traffic_generator import TrafficProfile, TrafficProfileFactory, SteadyProfile
 from app.simulation.traffic_simulator import TrafficGenerator
 from app.simulation.server_pool import ServerPool
+from app.routers.metrics import broadcast_to_all
 import asyncio
 
 router = APIRouter()
@@ -61,17 +62,23 @@ async def simulation_loop():
     """Background loop that generates traffic and broadcasts metrics."""
     global _simulation_running, _traffic_generator
 
-    from app.routers.metrics import broadcast_to_all
+    print(f"[LOOP] Starting. generator={_traffic_generator is not None}")
 
     elapsed = 0.0
     iteration = 0
     current_algorithm = "round_robin"
 
-    # Get ML predictor
+    # Get ML predictor (create fresh for each simulation run)
     predictor = get_ml_predictor()
 
-    # Track recent traffic for LSTM input
-    traffic_history = []
+    # Track recent traffic for LSTM input - use deque for efficient popleft
+    from collections import deque
+    traffic_history: deque = deque(maxlen=100)
+
+    # Pre-fill with current rate for faster LSTM warmup
+    initial_rate = _traffic_generator.get_current_rate() if _traffic_generator else 100.0
+    for _ in range(20):
+        traffic_history.append(initial_rate)
 
     while _simulation_running:
         try:
@@ -81,8 +88,7 @@ async def simulation_loop():
 
                 # Add to traffic history for LSTM
                 traffic_history.append(current_rate)
-                if len(traffic_history) > 100:
-                    traffic_history.pop(0)
+                # deque with maxlen auto-removes oldest when full
 
                 # Feed to LSTM predictor
                 if predictor:
@@ -93,7 +99,7 @@ async def simulation_loop():
 
                 # If no LSTM predictions, generate realistic fallback
                 if predictions is None or len(predictions) == 0:
-                    predictions = generate_predictions_fallback(current_rate, elapsed, _traffic_generator.profile_name, traffic_history)
+                    predictions = generate_predictions_fallback(current_rate, elapsed, _traffic_generator.profile_name, list(traffic_history))
 
                 # Rotate algorithm based on predictions
                 if predictions and len(predictions) >= 5:
@@ -112,7 +118,7 @@ async def simulation_loop():
                 await broadcast_to_all({
                     "type": "metric_update",
                     "timestamp": datetime.now().isoformat(),
-                    "servers": generate_mock_servers(elapsed, iteration),
+                    "servers": generate_mock_servers(elapsed, iteration, current_rate),
                     "algorithms": [],
                     "predictions": predictions[:5] if predictions else None,
                     "prediction_confidence": predictor.get_mape([current_rate] * 5, predictions[:5]) if predictor and predictions else None,
@@ -133,10 +139,13 @@ async def simulation_loop():
             await asyncio.sleep(1.0)
 
         except asyncio.CancelledError:
+            print("[LOOP] Cancelled")
             break
         except Exception as e:
-            print(f"Simulation loop error: {e}")
+            print(f"[LOOP] Error: {e}")
             await asyncio.sleep(1.0)
+
+    print("[LOOP] Exited")
 
 
 def generate_predictions_fallback(current_rate: float, elapsed: float, profile_name: str, history: list) -> list:
@@ -176,15 +185,26 @@ def generate_predictions_fallback(current_rate: float, elapsed: float, profile_n
         return [base * trend_factor * (0.95 + random.random() * 0.15) for _ in range(5)]
 
 
-def generate_mock_servers(elapsed: float, iteration: int) -> list:
-    """Generate mock server data for the dashboard."""
+def generate_mock_servers(elapsed: float, iteration: int, traffic_rate: float = 100.0) -> list:
+    """Generate mock server data for the dashboard based on traffic."""
+    # Distribute traffic based on weights (s1=1, s2=2, s3=1, s4=3) = total 7
+    total_weight = 7.0
+    # Add some variance and iteration-based cycling
+    base_connections = int(traffic_rate / total_weight)
+    variance = (iteration % 10) - 5  # -5 to +5 variance
+
+    s1_conn = max(1, base_connections * 1 + variance)
+    s2_conn = max(2, base_connections * 2 + variance)
+    s3_conn = max(1, base_connections * 1 + variance)
+    s4_conn = max(1, base_connections * 3 + variance)
+
     return [
         {
             "id": "s1",
             "host": "10.0.0.1",
             "port": 8080,
             "weight": 1,
-            "connections": (iteration % 10) + 5,
+            "connections": s1_conn,
             "healthy": True,
             "failure_count": 0,
             "created_at": datetime.now().isoformat(),
@@ -195,7 +215,7 @@ def generate_mock_servers(elapsed: float, iteration: int) -> list:
             "host": "10.0.0.2",
             "port": 8080,
             "weight": 2,
-            "connections": (iteration % 8) + 3,
+            "connections": s2_conn,
             "healthy": True,
             "failure_count": 0,
             "created_at": datetime.now().isoformat(),
@@ -206,7 +226,7 @@ def generate_mock_servers(elapsed: float, iteration: int) -> list:
             "host": "10.0.0.3",
             "port": 8080,
             "weight": 1,
-            "connections": (iteration % 6) + 2,
+            "connections": s3_conn,
             "healthy": True,
             "failure_count": 0,
             "created_at": datetime.now().isoformat(),
@@ -217,7 +237,7 @@ def generate_mock_servers(elapsed: float, iteration: int) -> list:
             "host": "10.0.0.4",
             "port": 8080,
             "weight": 3,
-            "connections": (iteration % 4) + 1,
+            "connections": s4_conn,
             "healthy": iteration % 20 < 18,
             "failure_count": 0 if iteration % 20 < 18 else 3,
             "created_at": datetime.now().isoformat(),
@@ -244,20 +264,45 @@ async def start_simulation(config: Optional[SimulationConfig] = None):
     """Start traffic simulation."""
     global _simulation_running, _simulation_task, _traffic_generator
 
+    print(f"[START] Called. Current state: running={_simulation_running}, task={_simulation_task}")
+
     if _simulation_running:
         raise HTTPException(status_code=400, detail="Simulation already running")
 
+    # Clean up any lingering task
+    if _simulation_task:
+        print("[START] Found existing task, cleaning up...")
+        _simulation_task.cancel()
+        try:
+            await asyncio.wait_for(_simulation_task, timeout=0.5)
+        except Exception:
+            pass
+        _simulation_task = None
+
+    # Use config rate or default to 100
+    rate = config.rate if config and config.rate else 100.0
+
+    # For ramp profile, use infinite duration (0) to keep ramping
+    duration = config.duration if config and config.duration else 0.0
+
+    # Always create a fresh generator when starting
     if config:
-        profile = TrafficProfileFactory.create(config.profile)
+        profile = TrafficProfileFactory.create(config.profile, rate=rate, duration=duration)
         if not profile:
             raise HTTPException(status_code=400, detail=f"Unknown profile: {config.profile}")
-        _traffic_generator = TrafficGenerator(profile, config.rate, config.duration)
-    elif not _traffic_generator:
+        _traffic_generator = TrafficGenerator(profile, rate, None)
+    else:
+        # Use steady profile with default rate
         profile = SteadyProfile(rate=100.0)
-        _traffic_generator = TrafficGenerator(profile, 100.0)
+        _traffic_generator = TrafficGenerator(profile, 100.0, None)
+
+    # Start the generator
+    _traffic_generator.start()
 
     _simulation_running = True
     _simulation_task = asyncio.create_task(simulation_loop())
+
+    print(f"[START] Simulation started: profile={profile.name}, rate={rate}")
 
     return SimulationResponse(
         status="started",
@@ -270,25 +315,65 @@ async def start_simulation(config: Optional[SimulationConfig] = None):
 @router.post("/stop", response_model=SimulationResponse)
 async def stop_simulation():
     """Stop traffic simulation."""
-    global _simulation_running, _simulation_task
+    global _simulation_running, _simulation_task, _traffic_generator
+
+    print(f"[STOP] Called. Current state: running={_simulation_running}, task={_simulation_task}")
 
     if not _simulation_running:
         raise HTTPException(status_code=400, detail="No simulation running")
 
     _simulation_running = False
+
+    # Wait for task to complete cancellation
     if _simulation_task:
         _task = _simulation_task
         _task.cancel()
         try:
-            await _task
+            await asyncio.wait_for(_task, timeout=2.0)
         except asyncio.CancelledError:
             pass
+        except asyncio.TimeoutError:
+            print("[STOP] Task did not cancel in time, forcing...")
+            _task.cancel()
+        except Exception as e:
+            print(f"[STOP] Error during cancel: {e}")
         _simulation_task = None
+
+    print("[STOP] Task cancelled, sending final broadcast...")
+
+    # Send final broadcast with zeroed state
+    await broadcast_to_all({
+        "type": "metric_update",
+        "timestamp": datetime.now().isoformat(),
+        "servers": [
+            {"id": "s1", "host": "10.0.0.1", "port": 8080, "weight": 1, "connections": 0, "healthy": True, "failure_count": 0, "created_at": datetime.now().isoformat(), "updated_at": datetime.now().isoformat()},
+            {"id": "s2", "host": "10.0.0.2", "port": 8080, "weight": 2, "connections": 0, "healthy": True, "failure_count": 0, "created_at": datetime.now().isoformat(), "updated_at": datetime.now().isoformat()},
+            {"id": "s3", "host": "10.0.0.3", "port": 8080, "weight": 1, "connections": 0, "healthy": True, "failure_count": 0, "created_at": datetime.now().isoformat(), "updated_at": datetime.now().isoformat()},
+            {"id": "s4", "host": "10.0.0.4", "port": 8080, "weight": 3, "connections": 0, "healthy": True, "failure_count": 0, "created_at": datetime.now().isoformat(), "updated_at": datetime.now().isoformat()},
+        ],
+        "algorithms": [],
+        "predictions": None,
+        "prediction_confidence": None,
+        "decisions": [],
+        "active_algorithm": "round_robin",
+        "smart_router_active": False,
+        "simulation": {
+            "running": False,
+            "profile": _traffic_generator.profile_name if _traffic_generator else "unknown",
+            "rate": 0,
+            "total_requests": 0,
+            "elapsed": 0
+        }
+    })
+
+    # Reset traffic generator for next run
+    if _traffic_generator:
+        _traffic_generator.reset()
 
     return SimulationResponse(
         status="stopped",
         profile=_traffic_generator.profile_name if _traffic_generator else "unknown",
-        rate=_traffic_generator.base_rate if _traffic_generator else 0,
+        rate=0,
         message="Traffic simulation stopped"
     )
 

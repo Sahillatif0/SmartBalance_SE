@@ -4,30 +4,69 @@ import { Play, Square, Activity, Zap, TrendingUp, Waves } from 'lucide-react';
 
 export function TrafficSimulator() {
   const [running, setRunning] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [profile, setProfile] = useState<'steady' | 'burst' | 'ramp' | 'wave'>('steady');
   const [rate, setRate] = useState(100);
 
+  // Poll for status - poll more frequently when not running to catch restart
   useEffect(() => {
-    getSimulationStatus()
-      .then((status) => setRunning(status.running))
-      .catch(console.error);
-  }, []);
+    let interval: ReturnType<typeof setInterval>;
+
+    const pollStatus = () => {
+      getSimulationStatus()
+        .then((status) => {
+          setRunning(status.running);
+          setStopping(false);
+        })
+        .catch(console.error);
+    };
+
+    // Initial poll
+    pollStatus();
+
+    // Poll every second when not running, every 2 seconds when running
+    interval = setInterval(() => {
+      pollStatus();
+    }, running ? 2000 : 1000);
+
+    return () => clearInterval(interval);
+  }, [running]);
 
   const handleStart = async () => {
+    // Don't start if already running or stopping
+    if (running || stopping) {
+      console.log('Cannot start: running=', running, 'stopping=', stopping);
+      return;
+    }
     try {
+      console.log('Starting simulation:', { profile, rate });
       await startSimulation({ profile, rate });
       setRunning(true);
+      setStopping(false);
     } catch (e) {
       console.error('Failed to start simulation:', e);
+      // Refresh status on error
+      getSimulationStatus().then((status) => setRunning(status.running));
     }
   };
 
   const handleStop = async () => {
+    // Don't stop if not running or already stopping
+    if (!running || stopping) {
+      console.log('Cannot stop: running=', running, 'stopping=', stopping);
+      return;
+    }
     try {
+      console.log('Stopping simulation');
+      setStopping(true);
       await stopSimulation();
       setRunning(false);
+      setStopping(false);
     } catch (e) {
       console.error('Failed to stop simulation:', e);
+      setStopping(false);
+      // Refresh status on error
+      getSimulationStatus().then((status) => setRunning(status.running));
     }
   };
 
@@ -125,7 +164,8 @@ export function TrafficSimulator() {
       {/* Control Button */}
       <button
         onClick={running ? handleStop : handleStart}
-        className="w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 relative overflow-hidden group"
+        disabled={stopping}
+        className="w-full py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 relative overflow-hidden group disabled:opacity-50"
         style={{
           background: running ? '#ef4444' : '#22c55e',
           color: '#fff'
@@ -135,7 +175,12 @@ export function TrafficSimulator() {
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)' }} />
 
-        {running ? (
+        {stopping ? (
+          <>
+            <Square className="w-4 h-4 relative animate-pulse" />
+            <span className="relative">Stopping...</span>
+          </>
+        ) : running ? (
           <>
             <Square className="w-4 h-4 relative" />
             <span className="relative">Stop Simulation</span>

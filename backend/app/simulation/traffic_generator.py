@@ -19,7 +19,7 @@ class TrafficProfile(ABC):
 class SteadyProfile(TrafficProfile):
     """Constant traffic rate."""
 
-    def __init__(self, rate: float = 100.0):
+    def __init__(self, rate: float = 100.0, duration: float = None):
         self._rate = rate
 
     @property
@@ -35,11 +35,13 @@ class BurstProfile(TrafficProfile):
 
     def __init__(
         self,
-        base: float = 50.0,
+        rate: float = 100.0,
         burst_factor: float = 5.0,
-        period: float = 10.0
+        period: float = 10.0,
+        duration: float = None
     ):
-        self._base = base
+        # Use rate as base for burst pattern
+        self._base = rate
         self._burst_factor = burst_factor
         self._period = period
 
@@ -58,13 +60,14 @@ class RampProfile(TrafficProfile):
 
     def __init__(
         self,
-        start: float = 10.0,
-        end: float = 200.0,
-        duration: float = 60.0
+        rate: float = 100.0,
+        end_multiplier: float = 2.0,
+        duration: float = 0.0
     ):
-        self._start = start
-        self._end = end
-        self._duration = duration
+        # Start at rate, ramp up to rate * end_multiplier
+        self._start = rate
+        self._end = rate * end_multiplier
+        self._duration = duration if duration > 0 else float('inf')  # Infinite if duration is 0
 
     @property
     def name(self) -> str:
@@ -80,12 +83,13 @@ class WaveProfile(TrafficProfile):
 
     def __init__(
         self,
-        base: float = 100.0,
-        amplitude: float = 100.0,
-        period: float = 30.0
+        rate: float = 100.0,
+        amplitude_multiplier: float = 1.0,
+        period: float = 30.0,
+        duration: float = None
     ):
-        self._base = base
-        self._amplitude = amplitude
+        self._base = rate
+        self._amplitude = rate * amplitude_multiplier
         self._period = period
 
     @property
