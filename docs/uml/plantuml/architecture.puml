@@ -1,74 +1,73 @@
 @startuml SmartBalance Architecture
 skinparam componentStyle rectangle
 
-package "Frontend Layer (React/TypeScript)" as Frontend <<#E3F2FD>> {
-    [App.tsx]
-    [Dashboard.tsx]
-    [ServerList.tsx]
-    [MetricsChart.tsx]
-    [TrafficSimulator.tsx]
-    [AlgorithmSelector.tsx]
-    [ForecastOverlay.tsx]
-    [RoutingLog.tsx]
-    [useWebSocket.ts]
-    [api.ts]
+package Frontend <<#E3F2FD>> {
+    component App
+    component Dashboard
+    component ServerList
+    component MetricsChart
+    component TrafficSimulator
+    component AlgorithmSelector
+    component ForecastOverlay
+    component RoutingLog
+    component useWebSocket
+    component api
 }
 
-package "Backend Layer (Python/FastAPI)" as Backend <<#E8F5E9>> {
-    [FastAPI Application] as FastAPI
+package Backend <<#E8F5E9>> {
+    component FastAPI
 
-    package "API Routers" as Routers <<#FFF3E0>> {
-        [servers.py]
-        [algorithms.py]
-        [metrics.py]
-        [simulation.py]
+    package Routers <<#FFF3E0>> {
+        component servers
+        component algorithms
+        component metrics
+        component simulation
     }
 
-    package "Core Load Balancing" as CoreLB <<#F3E5F5>> {
-        abstract [LoadBalancer]
-        [RoundRobinLB]
-        [LeastConnectionsLB]
-        [WeightedRoundRobinLB]
-        [SmartRouter]
-        [AlgorithmRegistry]
+    package CoreLB <<#F3E5F5>> {
+        component LoadBalancer
+        component RoundRobinLB
+        component LeastConnectionsLB
+        component WeightedRoundRobinLB
+        component SmartRouter
+        component AlgorithmRegistry
     }
 
-    package "ML Module" as ML <<#E0F7FA>> {
-        [LSTMModel (PyTorch)]
-        [TrafficPredictor]
-        [metrics_calculator.py]
+    package ML <<#E0F7FA>> {
+        component LSTMModel
+        component TrafficPredictor
+        component MetricsCalculator
     }
 
-    package "Simulation Module" as Sim <<#FFF8E1>> {
-        [TrafficGenerator]
-        [HealthChecker]
-        [ServerPool]
-        [EventBus]
+    package Simulation <<#FFF8E1>> {
+        component TrafficGenerator
+        component HealthChecker
+        component ServerPool
+        component EventBus
     }
 
-    package "Services Layer" as Services <<#ECEFF1>> {
-        [WebSocketManager]
-        [Database]
+    package Services <<#ECEFF1>> {
+        component WebSocketManager
+        component Database
     }
 }
 
-App.tsx --> Dashboard.tsx
-Dashboard.tsx --> ServerList.tsx
-Dashboard.tsx --> MetricsChart.tsx
-Dashboard.tsx --> TrafficSimulator.tsx
-Dashboard.tsx --> AlgorithmSelector.tsx
-Dashboard.tsx --> ForecastOverlay.tsx
-Dashboard.tsx --> RoutingLog.tsx
-Dashboard.tsx --> useWebSocket.ts
-useWebSocket.ts --> api.ts
+Dashboard --> ServerList
+Dashboard --> MetricsChart
+Dashboard --> TrafficSimulator
+Dashboard --> AlgorithmSelector
+Dashboard --> ForecastOverlay
+Dashboard --> RoutingLog
+Dashboard --> useWebSocket
+useWebSocket --> api
 
-api.ts --> FastAPI
-FastAPI --> servers.py
-FastAPI --> algorithms.py
-FastAPI --> metrics.py
-FastAPI --> simulation.py
+api --> FastAPI
+FastAPI --> servers
+FastAPI --> algorithms
+FastAPI --> metrics
+FastAPI --> simulation
 
-algorithms.py --> AlgorithmRegistry
+algorithms --> AlgorithmRegistry
 AlgorithmRegistry --> RoundRobinLB
 AlgorithmRegistry --> LeastConnectionsLB
 AlgorithmRegistry --> WeightedRoundRobinLB
@@ -76,12 +75,17 @@ AlgorithmRegistry --> WeightedRoundRobinLB
 SmartRouter --> AlgorithmRegistry
 SmartRouter --> TrafficPredictor
 
-simulation.py --> TrafficGenerator
-simulation.py --> HealthChecker
+simulation --> TrafficGenerator
+simulation --> HealthChecker
 
 TrafficGenerator --> LSTMModel
 TrafficPredictor --> LSTMModel
 
 FastAPI --> WebSocketManager
 FastAPI --> Database
+
+LoadBalancer <|-- RoundRobinLB
+LoadBalancer <|-- LeastConnectionsLB
+LoadBalancer <|-- WeightedRoundRobinLB
+LoadBalancer <|-- SmartRouter
 @enduml

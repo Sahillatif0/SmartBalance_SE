@@ -1,51 +1,51 @@
 @startuml SmartBalance Deployment
-skinparam nodesep 50
-skinparam ranksep 60
+skinparam nodesep 80
+skinparam ranksep 100
 
-node "Client Layer" as Client <<#E3F2FD>> {
-    [Web Browser]
+rectangle "Client Layer" <<#E3F2FD>> {
+    component Browser
 }
 
-node "Web Server Layer" as WebServer <<#E8F5E9>> {
-    [Nginx Reverse Proxy]
+rectangle "Web Server Layer" <<#E8F5E9>> {
+    component Nginx
 }
 
-node "Application Layer" as AppLayer <<#F3E5F5>> {
-    [Uvicorn ASGI Server] as Uvicorn
-    [FastAPI Application] as FastAPI
+rectangle "Application Layer" <<#F3E5F5>> {
+    component Uvicorn
+    component FastAPI
 
-    package "Backend Application" as BackendApp <<#FFF8E1>> {
-        [API Routers]
-        [Load Balancing Core]
-        [ML Module]
-        [Simulation]
+    rectangle BackendApp <<#FFF8E1>> {
+        component APIRouters
+        component CoreLB
+        component MLModule
+        component Simulation
     }
 }
 
-node "Data Layer" as DataLayer <<#E0F7FA>> {
-    database "SQLite Database" as SQLite
+rectangle "Data Layer" <<#E0F7FA>> {
+    database SQLite
 }
 
-node "Container Orchestration" as Containers <<#ECEFF1>> {
-    [Docker Compose] as DC
-    rectangle "FastAPI Container" as C1
-    rectangle "React Frontend" as C2
-    rectangle "Nginx Container" as C3
+rectangle "Container Layer" <<#ECEFF1>> {
+    component DC
+    component FastAPIContainer
+    component ReactContainer
+    component NginxContainer
 }
 
-WebBrowser --( HTTPS )-- Nginx
-Nginx --( Proxy )-- Uvicorn
-Uvicorn -- FastAPI
-FastAPI -- APIRouters
-FastAPI -- LoadBalancingCore
-FastAPI -- MLModule
-FastAPI -- Simulation
+Browser --> Nginx
+Nginx --> Uvicorn
+Uvicorn --> FastAPI
+FastAPI --> APIRouters
+FastAPI --> CoreLB
+FastAPI --> MLModule
+FastAPI --> Simulation
 
-FastAPI -- SQLite
+FastAPI --> SQLite
 
-WebBrowser --( WebSocket )-- FastAPI
+Browser - FastAPI : WebSocket
 
-DC -- C1
-DC -- C2
-DC -- C3
+DC --> FastAPIContainer
+DC --> ReactContainer
+DC --> NginxContainer
 @enduml
