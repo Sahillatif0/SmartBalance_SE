@@ -1,0 +1,95 @@
+@startuml Load Balancing Classes
+skinparam classAttributeIconSize 0
+
+abstract class LoadBalancer {
+    {abstract} +select_server(servers: List[Server]): Server
+    {abstract} +name: str
+    {abstract} +description: str
+    {abstract} +complexity: str
+    +filter_healthy(servers): List[Server]
+    +get_least_busy_server(servers): Server
+}
+
+class Server {
+    +id: str
+    +host: str
+    +port: int
+    +weight: int
+    +connections: int
+    +healthy: bool
+    +failure_count: int
+    +last_health_check: datetime
+    +increment_connections()
+    +decrement_connections()
+    +mark_unhealthy()
+    +mark_healthy()
+}
+
+class RoundRobinLB {
+    -_current_index: int
+    -_request_count: int
+    +select_server(servers): Server
+    +name: str
+    +description: str
+    +complexity: str
+    +reset()
+    +request_count: int
+}
+
+class LeastConnectionsLB {
+    -_heap: List[Tuple]
+    -_server_map: Dict
+    -_index_counter: int
+    +_rebuild_heap(servers)
+    +select_server(servers): Server
+    +name: str
+    +description: str
+    +complexity: str
+    +get_least_busy(): Server
+    +request_count: int
+}
+
+class WeightedRoundRobinLB {
+    -_current_index: int
+    -_weights: Dict
+    -_current_weight: int
+    +select_server(servers): Server
+    +name: str
+    +description: str
+    +complexity: str
+}
+
+class SmartRouter {
+    -_primary: LoadBalancer
+    -_fallback: LoadBalancer
+    -_current: LoadBalancer
+    -_using_fallback: bool
+    -_switch_count: int
+    +select_server(servers): Server
+    +evaluate_and_switch(servers, load): Server
+    -_switch_to_fallback()
+    -_switch_to_primary()
+    +is_using_fallback: bool
+    +active_algorithm: str
+    +switch_count: int
+    +force_switch(algorithm): bool
+    +get_stats(): Dict
+}
+
+class AlgorithmRegistry {
+    -_algorithms: Dict
+    -_descriptions: Dict
+    +get(name): LoadBalancer
+    +get_all_names(): List[str]
+    +get_info(name): tuple
+    +create_instance(name): LoadBalancer
+}
+
+LoadBalancer <|-- RoundRobinLB
+LoadBalancer <|-- LeastConnectionsLB
+LoadBalancer <|-- WeightedRoundRobinLB
+LoadBalancer <|-- SmartRouter
+
+SmartRouter o-- LoadBalancer : uses
+SmartRouter --> AlgorithmRegistry
+@enduml

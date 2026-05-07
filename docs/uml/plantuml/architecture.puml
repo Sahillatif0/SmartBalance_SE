@@ -1,0 +1,87 @@
+@startuml SmartBalance Architecture
+skinparam componentStyle rectangle
+
+package "Frontend Layer (React/TypeScript)" as Frontend <<#E3F2FD>> {
+    [App.tsx]
+    [Dashboard.tsx]
+    [ServerList.tsx]
+    [MetricsChart.tsx]
+    [TrafficSimulator.tsx]
+    [AlgorithmSelector.tsx]
+    [ForecastOverlay.tsx]
+    [RoutingLog.tsx]
+    [useWebSocket.ts]
+    [api.ts]
+}
+
+package "Backend Layer (Python/FastAPI)" as Backend <<#E8F5E9>> {
+    [FastAPI Application] as FastAPI
+
+    package "API Routers" as Routers <<#FFF3E0>> {
+        [servers.py]
+        [algorithms.py]
+        [metrics.py]
+        [simulation.py]
+    }
+
+    package "Core Load Balancing" as CoreLB <<#F3E5F5>> {
+        abstract [LoadBalancer]
+        [RoundRobinLB]
+        [LeastConnectionsLB]
+        [WeightedRoundRobinLB]
+        [SmartRouter]
+        [AlgorithmRegistry]
+    }
+
+    package "ML Module" as ML <<#E0F7FA>> {
+        [LSTMModel (PyTorch)]
+        [TrafficPredictor]
+        [metrics_calculator.py]
+    }
+
+    package "Simulation Module" as Sim <<#FFF8E1>> {
+        [TrafficGenerator]
+        [HealthChecker]
+        [ServerPool]
+        [EventBus]
+    }
+
+    package "Services Layer" as Services <<#ECEFF1>> {
+        [WebSocketManager]
+        [Database]
+    }
+}
+
+App.tsx --> Dashboard.tsx
+Dashboard.tsx --> ServerList.tsx
+Dashboard.tsx --> MetricsChart.tsx
+Dashboard.tsx --> TrafficSimulator.tsx
+Dashboard.tsx --> AlgorithmSelector.tsx
+Dashboard.tsx --> ForecastOverlay.tsx
+Dashboard.tsx --> RoutingLog.tsx
+Dashboard.tsx --> useWebSocket.ts
+useWebSocket.ts --> api.ts
+
+api.ts --> FastAPI
+FastAPI --> servers.py
+FastAPI --> algorithms.py
+FastAPI --> metrics.py
+FastAPI --> simulation.py
+
+algorithms.py --> AlgorithmRegistry
+AlgorithmRegistry --> RoundRobinLB
+AlgorithmRegistry --> LeastConnectionsLB
+AlgorithmRegistry --> WeightedRoundRobinLB
+
+SmartRouter --> AlgorithmRegistry
+SmartRouter --> TrafficPredictor
+
+simulation.py --> TrafficGenerator
+simulation.py --> HealthChecker
+
+TrafficGenerator --> LSTMModel
+TrafficPredictor --> LSTMModel
+
+FastAPI --> WebSocketManager
+FastAPI --> Database
+@enduml

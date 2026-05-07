@@ -1,0 +1,40 @@
+@startuml Request Routing Sequence
+header Request Routing Sequence
+
+actor Client as C
+participant "FastAPI Server" as API
+participant "AlgorithmRegistry" as REG
+participant "Active Algorithm" as ALGO
+participant "WebSocket Manager" as WS
+participant "Traffic Predictor" as LSTM
+
+C -> API: POST /api/v1/algorithms/select
+API -> REG: AlgorithmRegistry.get(name)
+REG --> API: Algorithm instance
+note over API: Switch active algorithm
+
+C -> API: WebSocket /api/v1/metrics/live
+API -> WS: Accept connection
+
+loop Every 1 second (Simulation)
+    API -> API: Generate traffic
+    API -> LSTM: add_traffic_sample(rate)
+    LSTM --> API: Sample added
+
+    API -> LSTM: predict()
+    LSTM --> API: Predictions[]
+
+    API -> ALGO: select_server(servers)
+    alt Smart Router active
+        API -> ALGO: evaluate_and_switch(servers, load)
+        ALGO -> LSTM: Check predictions
+        ALGO -> REG: Switch algorithm
+    end
+
+    ALGO --> API: Selected Server
+    API -> WS: Broadcast routing decision
+    WS --> C: {type: "routing_decision", ...}
+end
+
+footer SmartBalance Request Routing Flow
+@enduml

@@ -1,0 +1,51 @@
+@startuml SmartBalance Deployment
+skinparam nodesep 50
+skinparam ranksep 60
+
+node "Client Layer" as Client <<#E3F2FD>> {
+    [Web Browser]
+}
+
+node "Web Server Layer" as WebServer <<#E8F5E9>> {
+    [Nginx Reverse Proxy]
+}
+
+node "Application Layer" as AppLayer <<#F3E5F5>> {
+    [Uvicorn ASGI Server] as Uvicorn
+    [FastAPI Application] as FastAPI
+
+    package "Backend Application" as BackendApp <<#FFF8E1>> {
+        [API Routers]
+        [Load Balancing Core]
+        [ML Module]
+        [Simulation]
+    }
+}
+
+node "Data Layer" as DataLayer <<#E0F7FA>> {
+    database "SQLite Database" as SQLite
+}
+
+node "Container Orchestration" as Containers <<#ECEFF1>> {
+    [Docker Compose] as DC
+    rectangle "FastAPI Container" as C1
+    rectangle "React Frontend" as C2
+    rectangle "Nginx Container" as C3
+}
+
+WebBrowser --( HTTPS )-- Nginx
+Nginx --( Proxy )-- Uvicorn
+Uvicorn -- FastAPI
+FastAPI -- APIRouters
+FastAPI -- LoadBalancingCore
+FastAPI -- MLModule
+FastAPI -- Simulation
+
+FastAPI -- SQLite
+
+WebBrowser --( WebSocket )-- FastAPI
+
+DC -- C1
+DC -- C2
+DC -- C3
+@enduml

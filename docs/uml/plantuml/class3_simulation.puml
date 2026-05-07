@@ -1,0 +1,84 @@
+@startuml Simulation Module Classes
+skinparam classAttributeIconSize 0
+
+abstract class TrafficProfile {
+    {abstract} +name: str
+    {abstract} +generate(elapsed: float): float
+}
+
+class SteadyProfile {
+    +rate: float
+    +generate(elapsed): float
+}
+
+class BurstProfile {
+    +base_rate: float
+    +peak_duration: int
+    +quiet_duration: int
+    +generate(elapsed): float
+}
+
+class RampProfile {
+    +start_rate: float
+    +end_rate: float
+    +ramp_duration: float
+    +generate(elapsed): float
+}
+
+class WaveProfile {
+    +base_rate: float
+    +amplitude: float
+    +frequency: float
+    +generate(elapsed): float
+}
+
+class TrafficProfileFactory {
+    +create(profile: str): TrafficProfile
+}
+
+class TrafficGenerator {
+    +profile: TrafficProfile
+    +base_rate: float
+    +duration: float
+    -_start_time: datetime
+    -_elapsed_time: float
+    -_total_requests: int
+    +start()
+    +generate_traffic(delta_time): float
+    +get_current_rate(): float
+    +reset()
+}
+
+class HealthChecker {
+    +interval: float
+    +failure_threshold: int
+    +on_unhealthy: Callable
+    +on_healthy: Callable
+    -_running: bool
+    -_task: asyncio.Task
+    +start(servers)
+    +stop()
+    +_check_loop(servers)
+    +_check_servers(servers)
+    +_ping_server(server): bool
+    +check_single(server): bool
+    +is_running: bool
+    +last_check: datetime
+}
+
+class ServerPool {
+    +servers: List[Server]
+    +add_server(server)
+    +remove_server(server_id)
+    +get_server(server_id)
+    +get_healthy_servers()
+    +update_health(server_id, healthy)
+}
+
+TrafficProfile <|-- SteadyProfile
+TrafficProfile <|-- BurstProfile
+TrafficProfile <|-- RampProfile
+TrafficProfile <|-- WaveProfile
+
+TrafficGenerator --> TrafficProfile
+@enduml

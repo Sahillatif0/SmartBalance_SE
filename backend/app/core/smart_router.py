@@ -60,7 +60,7 @@ class SmartRouter:
         if not self.predictor or not self._primary:
             return self.select_server(servers)
 
-        predictions = self.predictor.get_next_predictions()
+        predictions = self.predictor.predict()
         if predictions is None or len(predictions) == 0:
             return self.select_server(servers)
 

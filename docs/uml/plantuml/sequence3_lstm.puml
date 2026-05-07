@@ -1,0 +1,29 @@
+@startuml LSTM Traffic Prediction Sequence
+header LSTM Traffic Prediction Sequence
+
+participant "Traffic Simulator" as Sim
+participant "TrafficGenerator" as TG
+participant "TrafficPredictor" as P
+participant "LSTMModel" as Model
+
+Sim -> TG: generate_traffic(delta_time)
+TG --> Sim: current_rate
+
+Sim -> P: add_traffic_sample(rate)
+note over P: Add to sliding window
+P -> P: Maintain 60 samples max
+
+Sim -> P: predict()
+alt Enough samples (>=10)
+    P -> P: Normalize trajectory
+    P -> Model: forward(input_tensor)
+    Model --> P: normalized_predictions
+    P -> P: Denormalize predictions
+    P --> Sim: predictions[15]
+else Not enough data
+    P --> Sim: Simple extrapolation
+end
+
+Sim -> P: get_mape(actual, predicted)
+P --> Sim: MAPE percentage
+@enduml

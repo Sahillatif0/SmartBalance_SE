@@ -1,0 +1,35 @@
+@startuml ML Module Classes
+skinparam classAttributeIconSize 0
+
+class LSTMModel {
+    <<PyTorch nn.Module>>
+    -hidden_size: int
+    -num_layers: int
+    -output_steps: int
+    +lstm: nn.LSTM
+    +fc: nn.Sequential
+    +forward(x: Tensor): Tensor
+}
+
+class TrafficPredictor {
+    -window_size: int
+    -forecast_steps: int
+    -device: torch.device
+    -model: LSTMModel
+    -trajectory: List[float]
+    -is_trained: bool
+    +_initialize_with_patterns()
+    +train_model(X, y, epochs)
+    +add_traffic_sample(rate)
+    +predict(): List[float]
+    +get_mape(actual, predicted): float
+}
+
+class MetricsCalculator {
+    +calculate_mape(actual, predicted): float
+    +calculate_rmse(actual, predicted): float
+    +calculate_mae(actual, predicted): float
+}
+
+TrafficPredictor --> LSTMModel : uses
+@enduml
